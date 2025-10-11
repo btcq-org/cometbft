@@ -125,7 +125,7 @@ func DefaultEvidenceParams() EvidenceParams {
 // only ed25519 pubkeys.
 func DefaultValidatorParams() ValidatorParams {
 	return ValidatorParams{
-		PubKeyTypes: []string{ABCIPubKeyTypeMLDSA44},
+		PubKeyTypes: []string{ABCIPubKeyTypeMLDSA44, ABCIPubKeyTypeEd25519},
 	}
 }
 
