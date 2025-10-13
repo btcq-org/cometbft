@@ -32,7 +32,7 @@ const evidenceChainID = "test_chain"
 
 var (
 	defaultEvidenceTime           = time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC)
-	defaultEvidenceMaxBytes int64 = 1000
+	defaultEvidenceMaxBytes int64 = 6000
 )
 
 func TestEvidencePoolBasic(t *testing.T) {
@@ -82,7 +82,8 @@ func TestEvidencePoolBasic(t *testing.T) {
 	next := pool.EvidenceFront()
 	assert.Equal(t, ev, next.Value.(types.Evidence))
 
-	const evidenceBytes int64 = 372
+	// given we are using mldsa-44 , thus the eveidence size is 5086 bytes
+	const evidenceBytes int64 = 5086
 	evs, size = pool.PendingEvidence(evidenceBytes)
 	assert.Equal(t, 1, len(evs))
 	assert.Equal(t, evidenceBytes, size) // check that the size of the single evidence in bytes is correct

@@ -184,7 +184,7 @@ func TestReactorsGossipNoCommittedEvidence(t *testing.T) {
 	// wait to see that only two evidence is sent
 	time.Sleep(300 * time.Millisecond)
 
-	peerEv, _ = pools[1].PendingEvidence(1000)
+	peerEv, _ = pools[1].PendingEvidence(20000)
 	assert.EqualValues(t, []types.Evidence{evList[0], evList[1]}, peerEv)
 }
 
@@ -308,7 +308,7 @@ func _waitForEvidence(
 	var evList []types.Evidence
 	currentPoolSize := 0
 	for currentPoolSize != len(evs) {
-		evList, _ = evpool.PendingEvidence(int64(len(evs) * 500)) // each evidence should not be more than 500 bytes
+		evList, _ = evpool.PendingEvidence(int64(len(evs) * 5086)) // each evidence should not be more than 500 bytes
 		currentPoolSize = len(evList)
 		time.Sleep(time.Millisecond * 100)
 	}
