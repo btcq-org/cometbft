@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
-	"io"
 	"math/big"
 
 	"github.com/cloudflare/circl/sign/mldsa/mldsa44"
@@ -60,11 +59,11 @@ func (privKey PrivKey) Type() string {
 // GenPrivKey generates a new mldsa-44 private key
 // It uses OS randomness to generate the private key.
 func GenPrivKey() PrivKey {
-	return genPrivKey(crypto.CReader())
+	return genPrivKey()
 }
 
 // genPrivKey generates a new mldsa-44 private key using the provided reader.
-func genPrivKey(rand io.Reader) PrivKey {
+func genPrivKey() PrivKey {
 	scheme := mldsa44.Scheme()
 	_, privateKey, err := scheme.GenerateKey()
 	if err != nil {
