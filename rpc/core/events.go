@@ -15,14 +15,13 @@ import (
 const (
 	// maxQueryLength is the maximum length of a query string that will be
 	// accepted. This is just a safety check to avoid outlandish queries.
-	maxQueryLength = 512
+	maxQueryLength = 8192
 )
 
 // Subscribe for events via WebSocket.
 // More: https://docs.cometbft.com/v0.38.x/rpc/#/Websocket/subscribe
 func (env *Environment) Subscribe(ctx *rpctypes.Context, query string) (*ctypes.ResultSubscribe, error) {
 	addr := ctx.RemoteAddr()
-
 	if env.EventBus.NumClients() >= env.Config.MaxSubscriptionClients {
 		return nil, fmt.Errorf("max_subscription_clients %d reached", env.Config.MaxSubscriptionClients)
 	} else if env.EventBus.NumClientSubscriptions(addr) >= env.Config.MaxSubscriptionsPerClient {
