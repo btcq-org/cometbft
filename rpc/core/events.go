@@ -15,7 +15,7 @@ import (
 const (
 	// maxQueryLength is the maximum length of a query string that will be
 	// accepted. This is just a safety check to avoid outlandish queries.
-	maxQueryLength = 512
+	maxQueryLength = 8192
 )
 
 // Subscribe for events via WebSocket.
