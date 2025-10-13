@@ -5,6 +5,7 @@ import (
 
 	"github.com/cometbft/cometbft/crypto/ed25519"
 	cryptoenc "github.com/cometbft/cometbft/crypto/encoding"
+	"github.com/cometbft/cometbft/crypto/mldsa"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 )
 
@@ -30,6 +31,17 @@ func UpdateValidator(pk []byte, power int64, keyType string) ValidatorUpdate {
 	case secp256k1.KeyType:
 		pke := secp256k1.PubKey(pk)
 		pkp, err := cryptoenc.PubKeyToProto(pke)
+		if err != nil {
+			panic(err)
+		}
+		return ValidatorUpdate{
+			// Address:
+			PubKey: pkp,
+			Power:  power,
+		}
+	case mldsa.KeyType:
+		publicKey := mldsa.PubKey(pk)
+		pkp, err := cryptoenc.PubKeyToProto(publicKey)
 		if err != nil {
 			panic(err)
 		}

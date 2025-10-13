@@ -144,7 +144,8 @@ func TestBlockMakePartSetWithEvidence(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.NotNil(t, partSet)
-	assert.EqualValues(t, 4, partSet.Total())
+	// block is much bigger with mldsa-44 , thus it become many parts
+	assert.EqualValues(t, 59, partSet.Total())
 }
 
 func TestBlockHashesTo(t *testing.T) {
