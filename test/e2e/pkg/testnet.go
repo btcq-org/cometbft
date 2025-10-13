@@ -17,6 +17,7 @@ import (
 	"github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/bls12381"
 	"github.com/cometbft/cometbft/crypto/ed25519"
+	"github.com/cometbft/cometbft/crypto/mldsa"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	"github.com/cometbft/cometbft/types"
@@ -633,6 +634,8 @@ func (g *keyGenerator) Generate(keyType string) crypto.PrivKey {
 		return pk
 	case ed25519.KeyType:
 		return ed25519.GenPrivKeyFromSecret(seed)
+	case mldsa.KeyType:
+		return mldsa.GenPrivKey()
 	default:
 		return ed25519.GenPrivKeyFromSecret(seed) // default fall back to ed25519 if not specified
 	}

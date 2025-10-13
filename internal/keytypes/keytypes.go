@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cometbft/cometbft/crypto"
+	"github.com/cometbft/cometbft/crypto/mldsa"
 
 	"github.com/cometbft/cometbft/crypto/ed25519"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
@@ -19,6 +20,9 @@ func init() {
 		},
 		secp256k1.KeyType: func() (crypto.PrivKey, error) { //nolint: unparam
 			return secp256k1.GenPrivKey(), nil
+		},
+		mldsa.KeyType: func() (crypto.PrivKey, error) {
+			return mldsa.GenPrivKey(), nil
 		},
 	}
 }

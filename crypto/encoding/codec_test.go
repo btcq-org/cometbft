@@ -3,6 +3,7 @@ package encoding
 import (
 	"testing"
 
+	"github.com/cometbft/cometbft/crypto/mldsa"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -55,6 +56,17 @@ func TestPubKeyToFromProto(t *testing.T) {
 		_, err = PubKeyToProto(bls12381.PubKey{})
 		assert.Error(t, err)
 	}
+
+	// mldsa-44 test
+	pk = mldsa.GenPrivKey().PubKey()
+	proto, err = PubKeyToProto(pk)
+	require.NoError(t, err)
+	pubkey, err = PubKeyFromProto(proto)
+	require.NoError(t, err)
+	assert.Equal(t, pk.Type(), pubkey.Type())
+	assert.Equal(t, pk.Bytes(), pubkey.Bytes())
+	assert.Equal(t, pk.Address(), pubkey.Address())
+	assert.Equal(t, pk.VerifySignature([]byte("msg"), []byte("sig")), pubkey.VerifySignature([]byte("msg"), []byte("sig")))
 }
 
 func TestPubKeyFromTypeAndBytes(t *testing.T) {

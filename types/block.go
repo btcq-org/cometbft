@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudflare/circl/sign/mldsa/mldsa44"
 	"github.com/cosmos/gogoproto/proto"
 	gogotypes "github.com/cosmos/gogoproto/types"
 
@@ -287,7 +288,6 @@ func MaxDataBytes(maxBytes, evidenceBytes int64, valsCount int) int64 {
 		MaxHeaderBytes -
 		MaxCommitBytes(valsCount) -
 		evidenceBytes
-
 	if maxDataBytes < 0 {
 		panic(fmt.Sprintf(
 			"Negative MaxDataBytes. Block.MaxBytes=%d is too small to accommodate header&lastCommit&evidence=%d",
@@ -308,7 +308,6 @@ func MaxDataBytesNoEvidence(maxBytes int64, valsCount int) int64 {
 		MaxOverheadForBlock -
 		MaxHeaderBytes -
 		MaxCommitBytes(valsCount)
-
 	if maxDataBytes < 0 {
 		panic(fmt.Sprintf(
 			"Negative MaxDataBytesNoEvidence. Block.MaxBytes=%d is too small to accommodate header&lastCommit&evidence=%d",
@@ -599,7 +598,7 @@ const (
 	// MaxCommitSigBytes is the max commit sig size is made up of MaxSignatureSize (96) bytes for the
 	// signature, 20 bytes for the address, 1 byte for the flag and 14 bytes for
 	// the timestamp.
-	MaxCommitSigBytes = 131 + maxCommitSigProtoEncOverhead
+	MaxCommitSigBytes = mldsa44.SignatureSize + 36 + maxCommitSigProtoEncOverhead
 )
 
 // CommitSig is a part of the Vote included in a Commit.
