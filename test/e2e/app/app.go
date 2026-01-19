@@ -110,9 +110,6 @@ type Config struct {
 	// -1 denotes it is set at genesis.
 	// 0 denotes it is set at InitChain.
 	VoteExtensionsUpdateHeight int64 `toml:"vote_extensions_update_height"`
-
-	// Vote extension padding size, to simulate different vote extension sizes.
-	VoteExtensionSize uint `toml:"vote_extension_size"`
 }
 
 func DefaultConfig(dir string) *Config {

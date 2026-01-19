@@ -3,18 +3,22 @@ package abcicli_test
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
+
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+
+	"golang.org/x/net/context"
+
+	"github.com/cometbft/cometbft/libs/log"
+	cmtnet "github.com/cometbft/cometbft/libs/net"
 
 	abciserver "github.com/cometbft/cometbft/abci/server"
 	"github.com/cometbft/cometbft/abci/types"
-	"github.com/cometbft/cometbft/libs/log"
 )
 
 func TestGRPC(t *testing.T) {
@@ -37,7 +41,8 @@ func TestGRPC(t *testing.T) {
 	})
 
 	// Connect to the socket
-	conn, err := grpc.NewClient(socket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	//nolint:staticcheck // SA1019 Existing use of deprecated but supported dial option.
+	conn, err := grpc.Dial(socket, grpc.WithInsecure(), grpc.WithContextDialer(dialerFunc))
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
@@ -53,6 +58,7 @@ func TestGRPC(t *testing.T) {
 		// Send request
 		response, err := client.CheckTx(context.Background(), &types.RequestCheckTx{Tx: []byte("test")})
 		require.NoError(t, err)
+		counter++
 		if response.Code != 0 {
 			t.Error("CheckTx failed with ret_code", response.Code)
 		}
@@ -67,4 +73,8 @@ func TestGRPC(t *testing.T) {
 		}
 
 	}
+}
+
+func dialerFunc(_ context.Context, addr string) (net.Conn, error) {
+	return cmtnet.Connect(addr)
 }

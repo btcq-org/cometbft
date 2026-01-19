@@ -22,7 +22,6 @@ func SupportsBatchVerifier(pk crypto.PubKey) bool {
 	if pk == nil {
 		return false
 	}
-
 	switch pk.Type() {
 	case ed25519.KeyType:
 		return true

@@ -10,20 +10,16 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/object"
-
-	"github.com/cometbft/cometbft/crypto/bls12381"
-	"github.com/cometbft/cometbft/crypto/ed25519"
-	"github.com/cometbft/cometbft/crypto/secp256k1"
 	e2e "github.com/cometbft/cometbft/test/e2e/pkg"
 	"github.com/cometbft/cometbft/version"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
 var (
 	// testnetCombinations defines global testnet options, where we generate a
 	// separate testnet for each combination (Cartesian product) of options.
-	testnetCombinations = map[string][]any{
+	testnetCombinations = map[string][]interface{}{
 		"topology":      {"single", "quad", "large"},
 		"initialHeight": {0, 1000},
 		"initialState": {
@@ -37,7 +33,7 @@ var (
 	}
 
 	// The following specify randomly chosen values for testnet nodes.
-	nodeDatabases = uniformChoice{"goleveldb", "cleveldb", "rocksdb", "badgerdb"}
+	nodeDatabases = uniformChoice{"goleveldb", "cleveldb", "rocksdb", "boltdb", "badgerdb"}
 	ipv6          = uniformChoice{false, true}
 	// FIXME: grpc disabled due to https://github.com/tendermint/tendermint/issues/5439
 	nodeABCIProtocols     = uniformChoice{"unix", "tcp", "builtin", "builtin_connsync"} // "grpc"
@@ -66,8 +62,6 @@ var (
 	voteExtensionUpdateHeight = uniformChoice{int64(-1), int64(0), int64(1)} // -1: genesis, 0: InitChain, 1: (use offset)
 	voteExtensionEnabled      = weightedChoice{true: 3, false: 1}
 	voteExtensionHeightOffset = uniformChoice{int64(0), int64(10), int64(100)}
-	voteExtensionSize         = uniformChoice{uint(128), uint(512), uint(2048), uint(8192)} //TODO: define the right values depending on experiment results.
-	keyType                   = uniformChoice{ed25519.KeyType, secp256k1.KeyType, bls12381.KeyType}
 )
 
 type generateConfig struct {
@@ -114,8 +108,7 @@ func Generate(cfg *generateConfig) ([]e2e.Manifest, error) {
 			fmt.Printf("- %s: %d\n", ver, wt)
 		}
 	}
-
-	manifests := make([]e2e.Manifest, 0, len(testnetCombinations))
+	manifests := []e2e.Manifest{}
 	for _, opt := range combinations(testnetCombinations) {
 		manifest, err := generateTestnet(cfg.randSource, opt, upgradeVersion, cfg.prometheus)
 		if err != nil {
@@ -127,7 +120,7 @@ func Generate(cfg *generateConfig) ([]e2e.Manifest, error) {
 }
 
 // generateTestnet generates a single testnet with the given options.
-func generateTestnet(r *rand.Rand, opt map[string]any, upgradeVersion string, prometheus bool) (e2e.Manifest, error) {
+func generateTestnet(r *rand.Rand, opt map[string]interface{}, upgradeVersion string, prometheus bool) (e2e.Manifest, error) {
 	manifest := e2e.Manifest{
 		IPv6:             ipv6.Choose(r).(bool),
 		ABCIProtocol:     nodeABCIProtocols.Choose(r).(string),
@@ -135,7 +128,6 @@ func generateTestnet(r *rand.Rand, opt map[string]any, upgradeVersion string, pr
 		InitialState:     opt["initialState"].(map[string]string),
 		Validators:       &map[string]int64{},
 		ValidatorUpdates: map[string]map[string]int64{},
-		KeyType:          keyType.Choose(r).(string),
 		Evidence:         evidence.Choose(r).(int),
 		Nodes:            map[string]*e2e.ManifestNode{},
 		UpgradeVersion:   upgradeVersion,
@@ -164,8 +156,6 @@ func generateTestnet(r *rand.Rand, opt map[string]any, upgradeVersion string, pr
 		baseHeight := max(manifest.VoteExtensionsUpdateHeight+1, manifest.InitialHeight)
 		manifest.VoteExtensionsEnableHeight = baseHeight + voteExtensionHeightOffset.Choose(r).(int64)
 	}
-
-	manifest.VoteExtensionSize = voteExtensionSize.Choose(r).(uint)
 
 	var numSeeds, numValidators, numFulls, numLightClients int
 	switch opt["topology"].(string) {

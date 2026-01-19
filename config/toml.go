@@ -10,7 +10,7 @@ import (
 )
 
 // DefaultDirPerm is the default permissions used when creating directories.
-const DefaultDirPerm = 0o700
+const DefaultDirPerm = 0700
 
 var configTemplate *template.Template
 
@@ -61,7 +61,7 @@ func WriteConfigFile(configFilePath string, config *Config) {
 		panic(err)
 	}
 
-	cmtos.MustWriteFile(configFilePath, buffer.Bytes(), 0o644)
+	cmtos.MustWriteFile(configFilePath, buffer.Bytes(), 0644)
 }
 
 // Note: any changes to the comments/variables/mapstructure
@@ -89,7 +89,7 @@ proxy_app = "{{ .BaseConfig.ProxyApp }}"
 # A custom human readable name for this node
 moniker = "{{ .BaseConfig.Moniker }}"
 
-# Database backend: goleveldb | cleveldb | rocksdb | badgerdb
+# Database backend: goleveldb | cleveldb | boltdb | rocksdb | badgerdb
 # * goleveldb (github.com/syndtr/goleveldb - most popular implementation)
 #   - pure go
 #   - stable
@@ -97,6 +97,10 @@ moniker = "{{ .BaseConfig.Moniker }}"
 #   - fast
 #   - requires gcc
 #   - use cleveldb build tag (go build -tags cleveldb)
+# * boltdb (uses etcd's fork of bolt - github.com/etcd-io/bbolt)
+#   - EXPERIMENTAL
+#   - may be faster is some use-cases (random reads - indexer)
+#   - use boltdb build tag (go build -tags boltdb)
 # * rocksdb (uses github.com/tecbot/gorocksdb)
 #   - EXPERIMENTAL
 #   - requires gcc
@@ -353,8 +357,8 @@ type = "flood"
 recheck = {{ .Mempool.Recheck }}
 
 # recheck_timeout is the time the application has during the rechecking process
-# to return CheckTx responses, once all requests have been sent. Responses that
-# arrive after the timeout expires are discarded. It only applies to
+# to return CheckTx responses, once all requests have been sent. Responses that 
+# arrive after the timeout expires are discarded. It only applies to 
 # non-local ABCI clients and when recheck is enabled.
 #
 # The ideal value will strongly depend on the application. It could roughly be estimated as the

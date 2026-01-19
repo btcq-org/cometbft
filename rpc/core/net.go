@@ -11,15 +11,14 @@ import (
 )
 
 // NetInfo returns network info.
-// More: https://docs.cometbft.com/v0.38/spec/rpc/#netinfo
+// More: https://docs.cometbft.com/v0.38.x/rpc/#/Info/net_info
 func (env *Environment) NetInfo(*rpctypes.Context) (*ctypes.ResultNetInfo, error) {
-	peers := make([]ctypes.Peer, 0, env.P2PPeers.Peers().Size())
-	var err error
-	env.P2PPeers.Peers().ForEach(func(peer p2p.Peer) {
+	peersList := env.P2PPeers.Peers().List()
+	peers := make([]ctypes.Peer, 0, len(peersList))
+	for _, peer := range peersList {
 		nodeInfo, ok := peer.NodeInfo().(p2p.DefaultNodeInfo)
 		if !ok {
-			err = fmt.Errorf("peer %v has the invalid node info type: %T ", peer.ID(), peer.NodeInfo())
-			return
+			return nil, fmt.Errorf("peer.NodeInfo() is not DefaultNodeInfo")
 		}
 		peers = append(peers, ctypes.Peer{
 			NodeInfo:         nodeInfo,
@@ -27,9 +26,6 @@ func (env *Environment) NetInfo(*rpctypes.Context) (*ctypes.ResultNetInfo, error
 			ConnectionStatus: peer.Status(),
 			RemoteIP:         peer.RemoteIP().String(),
 		})
-	})
-	if err != nil {
-		return nil, err
 	}
 	// TODO: Should we include PersistentPeers and Seeds in here?
 	// PRO: useful info
@@ -99,7 +95,7 @@ func (env *Environment) UnsafeDialPeers(
 }
 
 // Genesis returns genesis file.
-// More: https://docs.cometbft.com/v0.38/spec/rpc/#genesis
+// More: https://docs.cometbft.com/v0.38.x/rpc/#/Info/genesis
 func (env *Environment) Genesis(*rpctypes.Context) (*ctypes.ResultGenesis, error) {
 	if len(env.genChunks) > 1 {
 		return nil, errors.New("genesis response is large, please use the genesis_chunked API instead")

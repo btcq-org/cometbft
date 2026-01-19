@@ -7,7 +7,7 @@ OUTPUT?=$(BUILDDIR)/cometbft
 HTTPS_GIT := https://github.com/cometbft/cometbft.git
 CGO_ENABLED ?= 0
 
-# Process Docker environment variable TARGETPLATFORM
+# Process Docker environment varible TARGETPLATFORM
 # in order to build binary with correspondent ARCH
 # by default will always build for linux/amd64
 TARGETPLATFORM ?=
@@ -85,7 +85,7 @@ build:
 
 #? install: Install CometBFT to GOBIN
 install:
-	CGO_ENABLED=$(CGO_ENABLED) go install $(BUILD_FLAGS) -tags '$(BUILD_TAGS)' ./cmd/cometbft
+	CGO_ENABLED=$(CGO_ENABLED) go install $(BUILD_FLAGS) -tags $(BUILD_TAGS) ./cmd/cometbft
 .PHONY: install
 
 ###############################################################################
@@ -203,7 +203,6 @@ go.sum: go.mod
 	@echo "--> Ensure dependencies have not been modified"
 	@go mod verify
 	@go mod tidy
-.PHONY: go.sum
 
 #? draw_deps: Generate deps graph
 draw_deps:
@@ -341,7 +340,7 @@ endif
 
 #? contract-tests: Run a nodejs tool to test endpoints against a localnet
 # The command takes care of starting and stopping the network
-# prerequisites: build-contract-tests-hooks build-linux
+# prerequisits: build-contract-tests-hooks build-linux
 # the two build commands were not added to let this command run from generic containers or machines.
 # The binaries should be built beforehand
 contract-tests:
@@ -351,8 +350,24 @@ contract-tests:
 # Implements test splitting and running. This is pulled directly from
 # the github action workflows for better local reproducibility.
 
+GO_TEST_FILES != find $(CURDIR) -name "*_test.go"
+
+# default to four splits by default
+NUM_SPLIT ?= 4
+
 $(BUILDDIR):
 	mkdir -p $@
+
+# The format statement filters out all packages that don't have tests.
+# Note we need to check for both in-package tests (.TestGoFiles) and
+# out-of-package tests (.XTestGoFiles).
+$(BUILDDIR)/packages.txt:$(GO_TEST_FILES) $(BUILDDIR)
+	go list -f "{{ if (or .TestGoFiles .XTestGoFiles) }}{{ .ImportPath }}{{ end }}" ./... | sort > $@
+
+split-test-packages:$(BUILDDIR)/packages.txt
+	split -d -n l/$(NUM_SPLIT) $< $<.
+test-group-%:split-test-packages
+	cat $(BUILDDIR)/packages.txt.$* | xargs go test -mod=readonly -timeout=15m -race -coverprofile=$(BUILDDIR)/$*.profile.out
 
 #? help: Get more info on make commands.
 help: Makefile

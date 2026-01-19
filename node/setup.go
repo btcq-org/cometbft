@@ -229,10 +229,9 @@ func createMempoolAndMempoolReactor(
 	config *cfg.Config,
 	proxyApp proxy.AppConns,
 	state sm.State,
-	waitSync bool,
 	memplMetrics *mempl.Metrics,
 	logger log.Logger,
-) (mempl.Mempool, waitSyncReactor) {
+) (mempl.Mempool, p2p.Reactor) {
 	switch config.Mempool.Type {
 	// allow empty string for backward compatibility
 	case cfg.MempoolTypeFlood, "":
@@ -249,7 +248,6 @@ func createMempoolAndMempoolReactor(
 		reactor := mempl.NewReactor(
 			config.Mempool,
 			mp,
-			waitSync,
 		)
 		if config.Consensus.WaitForTxs() {
 			mp.EnableTxsAvailable()

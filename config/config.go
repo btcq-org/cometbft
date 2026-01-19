@@ -44,10 +44,6 @@ const (
 
 	MempoolTypeFlood = "flood"
 	MempoolTypeNop   = "nop"
-
-	v0 = "v0"
-	v1 = "v1"
-	v2 = "v2"
 )
 
 // NOTE: Most of the structs & relevant comments + the
@@ -157,6 +153,9 @@ func (cfg *Config) ValidateBasic() error {
 	}
 	if err := cfg.Instrumentation.ValidateBasic(); err != nil {
 		return ErrInSection{Section: "instrumentation", Err: err}
+	}
+	if !cfg.Consensus.CreateEmptyBlocks && cfg.Mempool.Type == MempoolTypeNop {
+		return fmt.Errorf("`nop` mempool does not support create_empty_blocks = false")
 	}
 	if !cfg.Consensus.CreateEmptyBlocks && cfg.Mempool.Type == MempoolTypeNop {
 		return fmt.Errorf("`nop` mempool does not support create_empty_blocks = false")
@@ -491,6 +490,9 @@ func (cfg *RPCConfig) ValidateBasic() error {
 	}
 	if cfg.TimeoutBroadcastTxCommit < 0 {
 		return cmterrors.ErrNegativeField{Field: "timeout_broadcast_tx_commit"}
+	}
+	if cfg.MaxRequestBatchSize < 0 {
+		return errors.New("max_request_batch_size can't be negative")
 	}
 	if cfg.MaxRequestBatchSize < 0 {
 		return errors.New("max_request_batch_size can't be negative")
@@ -838,6 +840,12 @@ func (cfg *MempoolConfig) ValidateBasic() error {
 	}
 	if cfg.MaxTxBytes < 0 {
 		return cmterrors.ErrNegativeField{Field: "max_tx_bytes"}
+	}
+	if cfg.ExperimentalMaxGossipConnectionsToPersistentPeers < 0 {
+		return errors.New("experimental_max_gossip_connections_to_persistent_peers can't be negative")
+	}
+	if cfg.ExperimentalMaxGossipConnectionsToNonPersistentPeers < 0 {
+		return errors.New("experimental_max_gossip_connections_to_non_persistent_peers can't be negative")
 	}
 	if cfg.ExperimentalMaxGossipConnectionsToPersistentPeers < 0 {
 		return errors.New("experimental_max_gossip_connections_to_persistent_peers can't be negative")

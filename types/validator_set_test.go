@@ -14,7 +14,8 @@ import (
 
 	"github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/ed25519"
-	"github.com/cometbft/cometbft/crypto/secp256k1"
+	cryptoenc "github.com/cometbft/cometbft/crypto/encoding"
+	"github.com/cometbft/cometbft/crypto/sr25519"
 	cmtmath "github.com/cometbft/cometbft/libs/math"
 	cmtrand "github.com/cometbft/cometbft/libs/rand"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -198,7 +199,7 @@ func TestIncrementProposerPriorityPositiveTimes(t *testing.T) {
 }
 
 func BenchmarkValidatorSetCopy(b *testing.B) {
-
+	b.StopTimer()
 	vset := NewValidatorSet([]*Validator{})
 	for i := 0; i < 1000; i++ {
 		privKey := ed25519.GenPrivKey()
@@ -209,8 +210,9 @@ func BenchmarkValidatorSetCopy(b *testing.B) {
 			panic("Failed to add validator")
 		}
 	}
+	b.StartTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		vset.Copy()
 	}
 }
@@ -387,7 +389,7 @@ func TestProposerSelection3(t *testing.T) {
 		times := int32(1)
 		mod := (cmtrand.Int() % 5) + 1
 		if cmtrand.Int()%mod > 0 {
-			// sometimes it's up to 5
+			// sometimes its up to 5
 			times = (cmtrand.Int31() % 4) + 1
 		}
 		vset.IncrementProposerPriority(times)
@@ -468,6 +470,25 @@ func TestValidatorSetTotalVotingPowerPanicsOnOverflow(t *testing.T) {
 	}
 
 	assert.Panics(t, shouldPanic)
+}
+
+func TestValidatorSetFromProtoReturnsErrorOnOverflow(t *testing.T) {
+	// ValidatorSetFromProto should return an error instead of panicking when total voting power exceeds MaxTotalVotingPower.
+	pubKey := ed25519.GenPrivKey().PubKey()
+	pkProto, err := cryptoenc.PubKeyToProto(pubKey)
+	require.NoError(t, err)
+
+	protoVals := &cmtproto.ValidatorSet{
+		Validators: []*cmtproto.Validator{
+			{Address: pubKey.Address(), PubKey: pkProto, VotingPower: math.MaxInt64, ProposerPriority: 0},
+			{Address: pubKey.Address(), PubKey: pkProto, VotingPower: math.MaxInt64, ProposerPriority: 0},
+		},
+		Proposer: &cmtproto.Validator{Address: pubKey.Address(), PubKey: pkProto, VotingPower: math.MaxInt64, ProposerPriority: 0},
+	}
+
+	_, err = ValidatorSetFromProto(protoVals)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "exceeds maximum")
 }
 
 func TestAvgProposerPriority(t *testing.T) {
@@ -831,7 +852,8 @@ func verifyValidatorSet(t *testing.T, valSet *ValidatorSet) {
 
 	// verify that the set's total voting power has been updated
 	tvp := valSet.totalVotingPower
-	valSet.updateTotalVotingPower()
+	err := valSet.updateTotalVotingPower()
+	require.NoError(t, err)
 	expectedTvp := valSet.TotalVotingPower()
 	assert.Equal(t, expectedTvp, tvp,
 		"expected TVP %d. Got %d, valSet=%s", expectedTvp, tvp, valSet)
@@ -1600,8 +1622,9 @@ func BenchmarkUpdates(b *testing.B) {
 	for j := 0; j < m; j++ {
 		newValList[j] = newValidator([]byte(fmt.Sprintf("v%d", j+l)), 1000)
 	}
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		// Add m validators to valSetCopy
 		valSetCopy := valSet.Copy()
 		assert.NoError(b, valSetCopy.UpdateWithChangeSet(newValList))
@@ -1639,13 +1662,8 @@ func TestVerifyCommitSingleWithInvalidSignatures(t *testing.T) {
 	// only count the signatures that are for the block
 	count := func(c CommitSig) bool { return c.BlockIDFlag == BlockIDFlagCommit }
 
-	err := verifyCommitSingle(cid, vs, commit, votingPowerNeeded, ignore, count, true, true, nil)
-	require.Error(t, err)
-
-	cache := NewSignatureCache()
-	err = verifyCommitSingle(cid, vs, commit, votingPowerNeeded, ignore, count, true, true, cache)
-	require.Error(t, err)
-	require.Equal(t, 0, cache.Len())
+	err := verifyCommitSingle(cid, vs, commit, votingPowerNeeded, ignore, count, true, true)
+	assert.Error(t, err)
 }
 
 func TestValidatorSet_AllKeysHaveSameType(t *testing.T) {
@@ -1666,7 +1684,7 @@ func TestValidatorSet_AllKeysHaveSameType(t *testing.T) {
 			sameType: true,
 		},
 		{
-			vals:     NewValidatorSet([]*Validator{randValidator(100), NewValidator(secp256k1.GenPrivKey().PubKey(), 200)}),
+			vals:     NewValidatorSet([]*Validator{randValidator(100), NewValidator(sr25519.GenPrivKey().PubKey(), 200)}),
 			sameType: false,
 		},
 	}

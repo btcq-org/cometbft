@@ -19,6 +19,7 @@ import (
 
 	"github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/ed25519"
+	"github.com/cometbft/cometbft/crypto/sr25519"
 	"github.com/cometbft/cometbft/libs/async"
 	cmtos "github.com/cometbft/cometbft/libs/os"
 	cmtrand "github.com/cometbft/cometbft/libs/rand"
@@ -119,8 +120,8 @@ func TestSecretConnectionReadWrite(t *testing.T) {
 
 	// A helper that will run with (fooConn, fooWrites, fooReads) and vice versa
 	genNodeRunner := func(id string, nodeConn kvstoreConn, nodeWrites []string, nodeReads *[]string) async.Task {
-		return func(_ int) (any, bool, error) {
-			// Initiate cryptographic private key and secret connection through nodeConn.
+		return func(_ int) (interface{}, bool, error) {
+			// Initiate cryptographic private key and secret connection trhough nodeConn.
 			nodePrvKey := ed25519.GenPrivKey()
 			nodeSecretConn, err := MakeSecretConnection(nodeConn, nodePrvKey)
 			if err != nil {
@@ -129,7 +130,7 @@ func TestSecretConnectionReadWrite(t *testing.T) {
 			}
 			// In parallel, handle some reads and writes.
 			trs, ok := async.Parallel(
-				func(_ int) (any, bool, error) {
+				func(_ int) (interface{}, bool, error) {
 					// Node writes:
 					for _, nodeWrite := range nodeWrites {
 						n, err := nodeSecretConn.Write([]byte(nodeWrite))
@@ -149,7 +150,7 @@ func TestSecretConnectionReadWrite(t *testing.T) {
 					}
 					return nil, false, nil
 				},
-				func(_ int) (any, bool, error) {
+				func(_ int) (interface{}, bool, error) {
 					// Node reads:
 					readBuffer := make([]byte, dataMaxSize)
 					for {
@@ -271,6 +272,20 @@ func TestNilPubkey(t *testing.T) {
 	assert.Equal(t, "toproto: key type <nil> is not supported", err.Error())
 }
 
+func TestNonEd25519Pubkey(t *testing.T) {
+	fooConn, barConn := makeKVStoreConnPair()
+	defer fooConn.Close()
+	defer barConn.Close()
+	fooPrvKey := ed25519.GenPrivKey()
+	barPrvKey := sr25519.GenPrivKey()
+
+	go MakeSecretConnection(fooConn, fooPrvKey) //nolint:errcheck // ignore for tests
+
+	_, err := MakeSecretConnection(barConn, barPrvKey)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "is not supported")
+}
+
 func writeLots(t *testing.T, wg *sync.WaitGroup, conn io.Writer, txt string, n int) {
 	defer wg.Done()
 	for i := 0; i < n; i++ {
@@ -294,9 +309,7 @@ func readLots(t *testing.T, wg *sync.WaitGroup, conn io.Reader, n int) {
 // Creates the data for a test vector file.
 // The file format is:
 // Hex(diffie_hellman_secret), loc_is_least, Hex(recvSecret), Hex(sendSecret), Hex(challenge)
-func createGoldenTestVectors(t *testing.T) string {
-	t.Helper()
-
+func createGoldenTestVectors(*testing.T) string {
 	data := ""
 	for i := 0; i < 32; i++ {
 		randSecretVector := cmtrand.Bytes(32)
@@ -330,7 +343,7 @@ func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection
 
 	// Make connections from both sides in parallel.
 	trs, ok := async.Parallel(
-		func(_ int) (val any, abort bool, err error) {
+		func(_ int) (val interface{}, abort bool, err error) {
 			fooSecConn, err = MakeSecretConnection(fooConn, fooPrvKey)
 			if err != nil {
 				tb.Errorf("failed to establish SecretConnection for foo: %v", err)
@@ -345,7 +358,7 @@ func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection
 			}
 			return nil, false, nil
 		},
-		func(_ int) (val any, abort bool, err error) {
+		func(_ int) (val interface{}, abort bool, err error) {
 			barSecConn, err = MakeSecretConnection(barConn, barPrvKey)
 			if barSecConn == nil {
 				tb.Errorf("failed to establish SecretConnection for bar: %v", err)

@@ -35,7 +35,7 @@ const (
 	requestRetrySeconds       = 30
 
 	// Minimum recv rate to ensure we're receiving blocks from a peer fast
-	// enough. If a peer is not sending us data at least that rate, we
+	// enough. If a peer is not sending us data at at least that rate, we
 	// consider them to have timedout and we disconnect.
 	//
 	// Based on the experiments with [Osmosis](https://osmosis.zone/), the
@@ -307,16 +307,17 @@ func (pool *BlockPool) RedoRequest(height int64) p2p.ID {
 // need to switch over from block sync to consensus at this height. If the
 // height of the extended commit and the height of the block do not match, we
 // do not add the block and return an error.
+// TODO: ensure that blocks come in order for each peer.
 func (pool *BlockPool) AddBlock(peerID p2p.ID, block *types.Block, extCommit *types.ExtendedCommit, blockSize int) error {
+	pool.mtx.Lock()
+	defer pool.mtx.Unlock()
+
 	if extCommit != nil && block.Height != extCommit.Height {
 		err := fmt.Errorf("block height %d != extCommit height %d", block.Height, extCommit.Height)
 		// Peer sent us an invalid block => remove it.
 		pool.sendError(err, peerID)
 		return err
 	}
-
-	pool.mtx.Lock()
-	defer pool.mtx.Unlock()
 
 	requester := pool.requesters[block.Height]
 	if requester == nil {
@@ -519,7 +520,6 @@ func (pool *BlockPool) makeNextRequester(nextHeight int64) {
 	}
 }
 
-// thread-safe.
 func (pool *BlockPool) sendRequest(height int64, peerID p2p.ID) {
 	if !pool.IsRunning() {
 		return
@@ -527,7 +527,6 @@ func (pool *BlockPool) sendRequest(height int64, peerID p2p.ID) {
 	pool.requestsCh <- BlockRequest{height, peerID}
 }
 
-// thread-safe.
 func (pool *BlockPool) sendError(err error, peerID p2p.ID) {
 	if !pool.IsRunning() {
 		return

@@ -1,7 +1,6 @@
 package conn
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/cipher"
 	crand "crypto/rand"
@@ -43,11 +42,6 @@ const (
 	labelEphemeralUpperPublicKey = "EPHEMERAL_UPPER_PUBLIC_KEY"
 	labelDHSecret                = "DH_SECRET"
 	labelSecretConnectionMac     = "SECRET_CONNECTION_MAC"
-
-	defaultWriteBufferSize = 128 * 1024
-	// try to read the biggest logical packet we can get, in one read.
-	// biggest logical packet is encoding_overhead(64kb).
-	defaultReadBufferSize = 65 * 1024
 )
 
 var (
@@ -66,15 +60,13 @@ var (
 // Otherwise they are vulnerable to MITM.
 // (TODO(ismail): see also https://github.com/tendermint/tendermint/issues/3010)
 type SecretConnection struct {
+
 	// immutable
 	recvAead cipher.AEAD
 	sendAead cipher.AEAD
 
 	remPubKey crypto.PubKey
-
-	conn       io.ReadWriteCloser
-	connWriter *bufio.Writer
-	connReader io.Reader
+	conn      io.ReadWriteCloser
 
 	// net.Conn must be thread safe:
 	// https://golang.org/pkg/net/#Conn.
@@ -101,7 +93,9 @@ type SecretConnection struct {
 // Caller should call conn.Close()
 // See docs/sts-final.pdf for more information.
 func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey crypto.PrivKey) (*SecretConnection, error) {
-	locPubKey := locPrivKey.PubKey()
+	var (
+		locPubKey = locPrivKey.PubKey()
+	)
 
 	// Generate ephemeral keys for perfect forward secrecy.
 	locEphPub, locEphPriv := genEphKeys()
@@ -154,8 +148,6 @@ func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey crypto.PrivKey) (*
 
 	sc := &SecretConnection{
 		conn:            conn,
-		connWriter:      bufio.NewWriterSize(conn, defaultWriteBufferSize),
-		connReader:      bufio.NewReaderSize(conn, defaultReadBufferSize),
 		recvBuffer:      nil,
 		recvNonce:       new([aeadNonceSize]byte),
 		sendNonce:       new([aeadNonceSize]byte),
@@ -223,7 +215,7 @@ func (sc *SecretConnection) Write(data []byte) (n int, err error) {
 			incrNonce(sc.sendNonce)
 			// end encryption
 
-			_, err = sc.connWriter.Write(sealedFrame)
+			_, err = sc.conn.Write(sealedFrame)
 			if err != nil {
 				return err
 			}
@@ -233,7 +225,6 @@ func (sc *SecretConnection) Write(data []byte) (n int, err error) {
 			return n, err
 		}
 	}
-	sc.connWriter.Flush()
 	return n, err
 }
 
@@ -251,7 +242,7 @@ func (sc *SecretConnection) Read(data []byte) (n int, err error) {
 
 	// read off the conn
 	sealedFrame := sc.recvSealedFrame
-	_, err = io.ReadFull(sc.connReader, sealedFrame)
+	_, err = io.ReadFull(sc.conn, sealedFrame)
 	if err != nil {
 		return n, err
 	}
@@ -268,11 +259,11 @@ func (sc *SecretConnection) Read(data []byte) (n int, err error) {
 
 	// copy checkLength worth into data,
 	// set recvBuffer to the rest.
-	chunkLength := binary.LittleEndian.Uint32(frame) // read the first four bytes
+	var chunkLength = binary.LittleEndian.Uint32(frame) // read the first four bytes
 	if chunkLength > dataMaxSize {
 		return 0, errors.New("chunkLength is greater than dataMaxSize")
 	}
-	chunk := frame[dataLenSize : dataLenSize+chunkLength]
+	var chunk = frame[dataLenSize : dataLenSize+chunkLength]
 	n = copy(data, chunk)
 	if n < len(chunk) {
 		sc.recvBuffer = make([]byte, len(chunk)-n)
@@ -289,7 +280,6 @@ func (sc *SecretConnection) SetDeadline(t time.Time) error { return sc.conn.(net
 func (sc *SecretConnection) SetReadDeadline(t time.Time) error {
 	return sc.conn.(net.Conn).SetReadDeadline(t)
 }
-
 func (sc *SecretConnection) SetWriteDeadline(t time.Time) error {
 	return sc.conn.(net.Conn).SetWriteDeadline(t)
 }
@@ -307,9 +297,10 @@ func genEphKeys() (ephPub, ephPriv *[32]byte) {
 }
 
 func shareEphPubKey(conn io.ReadWriter, locEphPub *[32]byte) (remEphPub *[32]byte, err error) {
+
 	// Send our pubkey and receive theirs in tandem.
-	trs, _ := async.Parallel(
-		func(_ int) (val any, abort bool, err error) {
+	var trs, _ = async.Parallel(
+		func(_ int) (val interface{}, abort bool, err error) {
 			lc := *locEphPub
 			_, err = protoio.NewDelimitedWriter(conn).WriteMsg(&gogotypes.BytesValue{Value: lc[:]})
 			if err != nil {
@@ -317,7 +308,7 @@ func shareEphPubKey(conn io.ReadWriter, locEphPub *[32]byte) (remEphPub *[32]byt
 			}
 			return nil, false, nil
 		},
-		func(_ int) (val any, abort bool, err error) {
+		func(_ int) (val interface{}, abort bool, err error) {
 			var bytes gogotypes.BytesValue
 			_, err = protoio.NewDelimitedReader(conn, 1024*1024).ReadMsg(&bytes)
 			if err != nil {
@@ -337,7 +328,7 @@ func shareEphPubKey(conn io.ReadWriter, locEphPub *[32]byte) (remEphPub *[32]byt
 	}
 
 	// Otherwise:
-	_remEphPub := trs.FirstValue().([32]byte)
+	var _remEphPub = trs.FirstValue().([32]byte)
 	return &_remEphPub, nil
 }
 
@@ -409,9 +400,10 @@ type authSigMessage struct {
 }
 
 func shareAuthSignature(sc io.ReadWriter, pubKey crypto.PubKey, signature []byte) (recvMsg authSigMessage, err error) {
+
 	// Send our info and receive theirs in tandem.
-	trs, _ := async.Parallel(
-		func(_ int) (val any, abort bool, err error) {
+	var trs, _ = async.Parallel(
+		func(_ int) (val interface{}, abort bool, err error) {
 			pbpk, err := cryptoenc.PubKeyToProto(pubKey)
 			if err != nil {
 				return nil, true, err
@@ -422,7 +414,7 @@ func shareAuthSignature(sc io.ReadWriter, pubKey crypto.PubKey, signature []byte
 			}
 			return nil, false, nil
 		},
-		func(_ int) (val any, abort bool, err error) {
+		func(_ int) (val interface{}, abort bool, err error) {
 			var pba tmp2p.AuthSigMessage
 			_, err = protoio.NewDelimitedReader(sc, 1024*1024).ReadMsg(&pba)
 			if err != nil {
@@ -448,7 +440,7 @@ func shareAuthSignature(sc io.ReadWriter, pubKey crypto.PubKey, signature []byte
 		return recvMsg, err
 	}
 
-	_recvMsg := trs.FirstValue().(authSigMessage)
+	var _recvMsg = trs.FirstValue().(authSigMessage)
 	return _recvMsg, nil
 }
 

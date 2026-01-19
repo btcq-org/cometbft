@@ -42,19 +42,19 @@ func (_m *Peer) FlushStop() {
 }
 
 // Get provides a mock function with given fields: _a0
-func (_m *Peer) Get(_a0 string) any {
+func (_m *Peer) Get(_a0 string) interface{} {
 	ret := _m.Called(_a0)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
 	}
 
-	var r0 any
-	if rf, ok := ret.Get(0).(func(string) any); ok {
+	var r0 interface{}
+	if rf, ok := ret.Get(0).(func(string) interface{}); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(any)
+			r0 = ret.Get(0).(interface{})
 		}
 	}
 
@@ -309,7 +309,7 @@ func (_m *Peer) Send(_a0 p2p.Envelope) bool {
 }
 
 // Set provides a mock function with given fields: _a0, _a1
-func (_m *Peer) Set(_a0 string, _a1 any) {
+func (_m *Peer) Set(_a0 string, _a1 interface{}) {
 	_m.Called(_a0, _a1)
 }
 

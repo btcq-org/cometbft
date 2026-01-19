@@ -115,7 +115,7 @@ func (mem *CListMempool) removeAllTxs() {
 		e.DetachPrev()
 	}
 
-	mem.txsMap.Range(func(key, _ any) bool {
+	mem.txsMap.Range(func(key, _ interface{}) bool {
 		mem.txsMap.Delete(key)
 		return true
 	})
@@ -185,8 +185,8 @@ func (mem *CListMempool) FlushAppConn() error {
 
 // XXX: Unsafe! Calling Flush may leave mempool in inconsistent state.
 func (mem *CListMempool) Flush() {
-	mem.updateMtx.Lock()
-	defer mem.updateMtx.Unlock()
+	mem.updateMtx.RLock()
+	defer mem.updateMtx.RUnlock()
 
 	mem.txsBytes.Store(0)
 	mem.cache.Reset()
@@ -255,7 +255,6 @@ func (mem *CListMempool) CheckTx(
 	}
 
 	if !mem.cache.Push(tx) { // if the transaction already exists in the cache
-		mem.metrics.AlreadyReceivedTxs.Add(1)
 		// Record a new sender for a tx we've already seen.
 		// Note it's possible a tx is still in the cache but no longer in the mempool
 		// (eg. after committing a block, txs are removed from mempool but not cache),

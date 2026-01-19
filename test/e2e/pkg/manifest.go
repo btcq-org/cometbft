@@ -49,7 +49,7 @@ type Manifest struct {
 	Nodes map[string]*ManifestNode `toml:"node"`
 
 	// KeyType sets the curve that will be used by validators.
-	// Options are ed25519, secp256k1 and bls12381.
+	// Options are ed25519, secp256k1 and sr25519.
 	KeyType string `toml:"key_type"`
 
 	// Evidence indicates the amount of evidence that will be injected into the
@@ -109,10 +109,6 @@ type Manifest struct {
 	// -1 denotes it is set at genesis.
 	// 0 denotes it is set at InitChain.
 	VoteExtensionsUpdateHeight int64 `toml:"vote_extensions_update_height"`
-
-	// Defines a minimum size for the vote extensions.
-	VoteExtensionSize uint `toml:"vote_extension_size"`
-
 	// Maximum number of peers to which the node gossips transactions
 	ExperimentalMaxGossipConnectionsToPersistentPeers    uint `toml:"experimental_max_gossip_connections_to_persistent_peers"`
 	ExperimentalMaxGossipConnectionsToNonPersistentPeers uint `toml:"experimental_max_gossip_connections_to_non_persistent_peers"`
@@ -142,7 +138,7 @@ type ManifestNode struct {
 	PersistentPeers []string `toml:"persistent_peers"`
 
 	// Database specifies the database backend: "goleveldb", "cleveldb",
-	// "rocksdb", or "badgerdb". Defaults to goleveldb.
+	// "rocksdb", "boltdb", or "badgerdb". Defaults to goleveldb.
 	Database string `toml:"database"`
 
 	// PrivvalProtocol specifies the protocol used to sign consensus messages:

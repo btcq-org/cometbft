@@ -81,8 +81,8 @@ func (b *EventBus) Subscribe(
 	return b.pubsub.Subscribe(ctx, subscriber, query, outCapacity...)
 }
 
-// SubscribeUnbuffered can be used for a local consensus explorer and synchronous
-// testing. Do not use for public facing / untrusted subscriptions!
+// This method can be used for a local consensus explorer and synchronous
+// testing. Do not use for for public facing / untrusted subscriptions!
 func (b *EventBus) SubscribeUnbuffered(
 	ctx context.Context,
 	subscriber string,
@@ -115,13 +115,13 @@ func (*EventBus) validateAndStringifyEvents(events []types.Event) map[string][]s
 		if len(event.Type) == 0 {
 			continue
 		}
-		prefix := event.Type + "."
+
 		for _, attr := range event.Attributes {
 			if len(attr.Key) == 0 {
 				continue
 			}
 
-			compositeTag := prefix + attr.Key
+			compositeTag := fmt.Sprintf("%s.%s", event.Type, attr.Key)
 			result[compositeTag] = append(result[compositeTag], attr.Value)
 		}
 	}
@@ -232,7 +232,7 @@ func (NopEventBus) Subscribe(
 	context.Context,
 	string,
 	cmtpubsub.Query,
-	chan<- any,
+	chan<- interface{},
 ) error {
 	return nil
 }
