@@ -16,6 +16,7 @@ func init() {
 	json.RegisterType((*pc.PublicKey)(nil), "tendermint.crypto.PublicKey")
 	json.RegisterType((*pc.PublicKey_Ed25519)(nil), "tendermint.crypto.PublicKey_Ed25519")
 	json.RegisterType((*pc.PublicKey_Secp256K1)(nil), "tendermint.crypto.PublicKey_Secp256K1")
+	json.RegisterType((*pc.PublicKey_Mldsa)(nil), "tendermint.crypto.PublicKey_Mldsa")
 }
 
 // PubKeyToProto takes crypto.PubKey and transforms it to a protobuf Pubkey
@@ -32,16 +33,6 @@ func PubKeyToProto(k crypto.PubKey) (pc.PublicKey, error) {
 		kp = pc.PublicKey{
 			Sum: &pc.PublicKey_Secp256K1{
 				Secp256K1: k,
-			},
-		}
-	case bls12381.PubKey:
-		if !bls12381.Enabled {
-			return kp, ErrUnsupportedKey{Key: k}
-		}
-
-		kp = pc.PublicKey{
-			Sum: &pc.PublicKey_Bls12381{
-				Bls12381: k.Bytes(),
 			},
 		}
 	case mldsa.PubKey:
@@ -75,19 +66,6 @@ func PubKeyFromProto(k pc.PublicKey) (crypto.PubKey, error) {
 		pk := make(secp256k1.PubKey, secp256k1.PubKeySize)
 		copy(pk, k.Secp256K1)
 		return pk, nil
-	case *pc.PublicKey_Bls12381:
-		if !bls12381.Enabled {
-			return nil, ErrUnsupportedKey{Key: k}
-		}
-
-		if len(k.Bls12381) != bls12381.PubKeySize {
-			return nil, ErrInvalidKeyLen{
-				Key:  k,
-				Got:  len(k.Bls12381),
-				Want: bls12381.PubKeySize,
-			}
-		}
-		return bls12381.NewPublicKeyFromBytes(k.Bls12381)
 	case *pc.PublicKey_Mldsa:
 		if len(k.Mldsa) != mldsa44.PublicKeySize {
 			return nil, fmt.Errorf("invalid size for PubKeyMldsa. Got %d, expected %d",
