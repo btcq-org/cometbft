@@ -295,8 +295,7 @@ func TestFinalizeBlockMisbehavior(t *testing.T) {
 						BlockIDFlag:      types.BlockIDFlagNil,
 						ValidatorAddress: crypto.AddressHash([]byte("validator_address")),
 						Timestamp:        defaultEvidenceTime,
-						Signature:        crypto.CRandBytes(types.MaxSignatureSize),
-					}},
+						Signature:        crypto.CRandBytes(types.MaxSignatureSize)}},
 				},
 			},
 			ValidatorSet: state.Validators,
@@ -706,7 +705,8 @@ func TestFinalizeBlockValidatorUpdatesResultingInEmptySet(t *testing.T) {
 
 func TestEmptyPrepareProposal(t *testing.T) {
 	const height = 2
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	app := &abci.BaseApplication{}
 	cc := proxy.NewLocalClientCreator(app)
@@ -752,7 +752,8 @@ func TestEmptyPrepareProposal(t *testing.T) {
 // the prepare proposal response are included in the block.
 func TestPrepareProposalTxsAllIncluded(t *testing.T) {
 	const height = 2
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	state, stateDB, privVals := makeState(1, height)
 	stateStore := sm.NewStore(stateDB, sm.StoreOptions{
@@ -802,7 +803,8 @@ func TestPrepareProposalTxsAllIncluded(t *testing.T) {
 // in the order matching the order they are returned from PrepareProposal.
 func TestPrepareProposalReorderTxs(t *testing.T) {
 	const height = 2
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	state, stateDB, privVals := makeState(1, height)
 	stateStore := sm.NewStore(stateDB, sm.StoreOptions{
@@ -855,7 +857,8 @@ func TestPrepareProposalReorderTxs(t *testing.T) {
 // an error if the ResponsePrepareProposal returned from the application is invalid.
 func TestPrepareProposalErrorOnTooManyTxs(t *testing.T) {
 	const height = 2
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	state, stateDB, privVals := makeState(1, height)
 	// limit max block size
@@ -909,7 +912,8 @@ func TestPrepareProposalErrorOnTooManyTxs(t *testing.T) {
 // its size and will go beyond the limit upon serialization.
 func TestPrepareProposalCountSerializationOverhead(t *testing.T) {
 	const height = 2
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	state, stateDB, privVals := makeState(1, height)
 	// limit max block size
@@ -964,7 +968,8 @@ func TestPrepareProposalCountSerializationOverhead(t *testing.T) {
 // upon calling PrepareProposal on it.
 func TestPrepareProposalErrorOnPrepareProposalError(t *testing.T) {
 	const height = 2
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	state, stateDB, privVals := makeState(1, height)
 	stateStore := sm.NewStore(stateDB, sm.StoreOptions{
@@ -1050,7 +1055,8 @@ func TestCreateProposalAbsentVoteExtensions(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			ctx := t.Context()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
 			app := abcimocks.NewApplication(t)
 			if !testCase.expectPanic {

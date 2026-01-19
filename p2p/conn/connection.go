@@ -34,8 +34,8 @@ const (
 
 	// some of these defaults are written in the user config
 	// flushThrottle, sendRate, recvRate
-	// TODO: remove values present in config.
-	defaultFlushThrottle = 10 * time.Millisecond
+	// TODO: remove values present in config
+	defaultFlushThrottle = 100 * time.Millisecond
 
 	defaultSendQueueCapacity   = 1
 	defaultRecvBufferCapacity  = 4096
@@ -49,7 +49,7 @@ const (
 
 type (
 	receiveCbFunc func(chID byte, msgBytes []byte)
-	errorCbFunc   func(any)
+	errorCbFunc   func(interface{})
 )
 
 /*
@@ -343,7 +343,7 @@ func (c *MConnection) _recover() {
 	}
 }
 
-func (c *MConnection) stopForError(r any) {
+func (c *MConnection) stopForError(r interface{}) {
 	if err := c.Stop(); err != nil {
 		c.Logger.Error("Error stopping connection", "err", err)
 	}
@@ -618,7 +618,7 @@ FOR_LOOP:
 		c.recvMonitor.Update(_n)
 		if err != nil {
 			// stopServices was invoked and we are shutting down
-			// receiving is expected to fail since we will close the connection
+			// receiving is excpected to fail since we will close the connection
 			select {
 			case <-c.quitRecvRoutine:
 				break FOR_LOOP
@@ -784,10 +784,6 @@ type Channel struct {
 	sending       []byte
 	recentlySent  int64 // exponential moving average
 
-	nextPacketMsg           *tmp2p.PacketMsg
-	nextP2pWrapperPacketMsg *tmp2p.Packet_PacketMsg
-	nextPacket              *tmp2p.Packet
-
 	maxPacketMsgPayloadSize int
 
 	Logger log.Logger
@@ -803,9 +799,6 @@ func newChannel(conn *MConnection, desc ChannelDescriptor) *Channel {
 		desc:                    desc,
 		sendQueue:               make(chan []byte, desc.SendQueueCapacity),
 		recving:                 make([]byte, 0, desc.RecvBufferCapacity),
-		nextPacketMsg:           &tmp2p.PacketMsg{ChannelID: int32(desc.ID)},
-		nextP2pWrapperPacketMsg: &tmp2p.Packet_PacketMsg{},
-		nextPacket:              &tmp2p.Packet{},
 		maxPacketMsgPayloadSize: conn.config.MaxPacketMsgPayloadSize,
 	}
 }
@@ -852,8 +845,8 @@ func (ch *Channel) canSend() bool {
 }
 
 // Returns true if any PacketMsgs are pending to be sent.
-// Call before calling updateNextPacket
-// Goroutine-safe.
+// Call before calling nextPacketMsg()
+// Goroutine-safe
 func (ch *Channel) isSendPending() bool {
 	if len(ch.sending) == 0 {
 		if len(ch.sendQueue) == 0 {
@@ -864,30 +857,29 @@ func (ch *Channel) isSendPending() bool {
 	return true
 }
 
-// Updates the nextPacket proto message for us to send.
-// Not goroutine-safe.
-func (ch *Channel) updateNextPacket() {
+// Creates a new PacketMsg to send.
+// Not goroutine-safe
+func (ch *Channel) nextPacketMsg() tmp2p.PacketMsg {
+	packet := tmp2p.PacketMsg{ChannelID: int32(ch.desc.ID)}
 	maxSize := ch.maxPacketMsgPayloadSize
 	if len(ch.sending) <= maxSize {
-		ch.nextPacketMsg.Data = ch.sending
-		ch.nextPacketMsg.EOF = true
+		packet.Data = ch.sending
+		packet.EOF = true
 		ch.sending = nil
 		atomic.AddInt32(&ch.sendQueueSize, -1) // decrement sendQueueSize
 	} else {
-		ch.nextPacketMsg.Data = ch.sending[:maxSize]
-		ch.nextPacketMsg.EOF = false
+		packet.Data = ch.sending[:maxSize]
+		packet.EOF = false
 		ch.sending = ch.sending[maxSize:]
 	}
-
-	ch.nextP2pWrapperPacketMsg.PacketMsg = ch.nextPacketMsg
-	ch.nextPacket.Sum = ch.nextP2pWrapperPacketMsg
+	return packet
 }
 
 // Writes next PacketMsg to w and updates c.recentlySent.
 // Not goroutine-safe.
 func (ch *Channel) writePacketMsgTo(w protoio.Writer) (n int, err error) {
-	ch.updateNextPacket()
-	n, err = w.WriteMsg(ch.nextPacket)
+	packet := ch.nextPacketMsg()
+	n, err = w.WriteMsg(mustWrapPacket(&packet))
 	if err != nil {
 		return 0, err
 	}
@@ -931,26 +923,32 @@ func (ch *Channel) updateStats() {
 
 // mustWrapPacket takes a packet kind (oneof) and wraps it in a tmp2p.Packet message.
 func mustWrapPacket(pb proto.Message) *tmp2p.Packet {
-	msg := &tmp2p.Packet{}
-	mustWrapPacketInto(pb, msg)
-	return msg
-}
+	var msg tmp2p.Packet
 
-func mustWrapPacketInto(pb proto.Message, dst *tmp2p.Packet) {
 	switch pb := pb.(type) {
+	case *tmp2p.Packet: // already a packet
+		msg = *pb
 	case *tmp2p.PacketPing:
-		dst.Sum = &tmp2p.Packet_PacketPing{
-			PacketPing: pb,
+		msg = tmp2p.Packet{
+			Sum: &tmp2p.Packet_PacketPing{
+				PacketPing: pb,
+			},
 		}
 	case *tmp2p.PacketPong:
-		dst.Sum = &tmp2p.Packet_PacketPong{
-			PacketPong: pb,
+		msg = tmp2p.Packet{
+			Sum: &tmp2p.Packet_PacketPong{
+				PacketPong: pb,
+			},
 		}
 	case *tmp2p.PacketMsg:
-		dst.Sum = &tmp2p.Packet_PacketMsg{
-			PacketMsg: pb,
+		msg = tmp2p.Packet{
+			Sum: &tmp2p.Packet_PacketMsg{
+				PacketMsg: pb,
+			},
 		}
 	default:
 		panic(fmt.Errorf("unknown packet type %T", pb))
 	}
+
+	return &msg
 }

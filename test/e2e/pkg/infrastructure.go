@@ -78,6 +78,7 @@ func NewDockerInfrastructureData(m Manifest) (InfrastructureData, error) {
 			ExtIPAddress: localHostIP,
 			Port:         portGen.Next(),
 		}
+
 	}
 	return ifd, nil
 }

@@ -14,7 +14,7 @@ type Peer struct {
 	ip                   net.IP
 	id                   p2p.ID
 	addr                 *p2p.NetAddress
-	kv                   map[string]any
+	kv                   map[string]interface{}
 	Outbound, Persistent bool
 }
 
@@ -33,7 +33,7 @@ func NewPeer(ip net.IP) *Peer {
 		ip:   ip,
 		id:   nodeKey.ID(),
 		addr: netAddr,
-		kv:   make(map[string]any),
+		kv:   make(map[string]interface{}),
 	}
 	mp.BaseService = service.NewBaseService(nil, "MockPeer", mp)
 	if err := mp.Start(); err != nil {
@@ -55,14 +55,14 @@ func (mp *Peer) Status() conn.ConnectionStatus { return conn.ConnectionStatus{} 
 func (mp *Peer) ID() p2p.ID                    { return mp.id }
 func (mp *Peer) IsOutbound() bool              { return mp.Outbound }
 func (mp *Peer) IsPersistent() bool            { return mp.Persistent }
-func (mp *Peer) Get(key string) any {
+func (mp *Peer) Get(key string) interface{} {
 	if value, ok := mp.kv[key]; ok {
 		return value
 	}
 	return nil
 }
 
-func (mp *Peer) Set(key string, value any) {
+func (mp *Peer) Set(key string, value interface{}) {
 	mp.kv[key] = value
 }
 func (mp *Peer) RemoteIP() net.IP            { return mp.ip }

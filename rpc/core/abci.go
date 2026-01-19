@@ -11,7 +11,7 @@ import (
 )
 
 // ABCIQuery queries the application for some information.
-// More: https://docs.cometbft.com/v0.38/spec/rpc/#abciquery
+// More: https://docs.cometbft.com/v0.38.x/rpc/#/ABCI/abci_query
 func (env *Environment) ABCIQuery(
 	_ *rpctypes.Context,
 	path string,
@@ -33,7 +33,7 @@ func (env *Environment) ABCIQuery(
 }
 
 // ABCIInfo gets some info about the application.
-// More: https://docs.cometbft.com/v0.38/spec/rpc/#abciinfo
+// More: https://docs.cometbft.com/v0.38.x/rpc/#/ABCI/abci_info
 func (env *Environment) ABCIInfo(_ *rpctypes.Context) (*ctypes.ResultABCIInfo, error) {
 	resInfo, err := env.ProxyAppQuery.Info(context.TODO(), proxy.RequestInfo)
 	if err != nil {

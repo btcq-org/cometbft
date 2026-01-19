@@ -25,7 +25,6 @@ type Config struct {
 	KeyType                    string                      `toml:"key_type"`
 	VoteExtensionsEnableHeight int64                       `toml:"vote_extensions_enable_height"`
 	VoteExtensionsUpdateHeight int64                       `toml:"vote_extensions_update_height"`
-	VoteExtensionSize          uint                        `toml:"vote_extension_size"`
 }
 
 // App extracts out the application specific configuration parameters
@@ -39,7 +38,6 @@ func (cfg *Config) App() *app.Config {
 		PersistInterval:            cfg.PersistInterval,
 		VoteExtensionsEnableHeight: cfg.VoteExtensionsEnableHeight,
 		VoteExtensionsUpdateHeight: cfg.VoteExtensionsUpdateHeight,
-		VoteExtensionSize:          cfg.VoteExtensionSize,
 	}
 }
 
@@ -64,9 +62,9 @@ func LoadConfig(file string) (*Config, error) {
 func (cfg Config) Validate() error {
 	switch {
 	case cfg.ChainID == "":
-		return cmterrors.ErrRequiredField{Field: "chain_id"}
+		return errors.New("chain_id parameter is required")
 	case cfg.Listen == "" && cfg.Protocol != "builtin" && cfg.Protocol != "builtin_connsync":
-		return cmterrors.ErrRequiredField{Field: "listen"}
+		return errors.New("listen parameter is required")
 	default:
 		return nil
 	}

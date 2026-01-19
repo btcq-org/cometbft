@@ -28,7 +28,9 @@ import (
 	"github.com/cometbft/cometbft/types"
 )
 
-var ctx = context.Background()
+var (
+	ctx = context.Background()
+)
 
 func getHTTPClient() *rpchttp.HTTP {
 	rpcAddr := rpctest.GetConfig().RPC.ListenAddress
@@ -187,7 +189,8 @@ func TestGenesisAndValidators(t *testing.T) {
 }
 
 func TestGenesisChunked(t *testing.T) {
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	for _, c := range GetClients() {
 		first, err := c.GenesisChunked(ctx, 0)
@@ -536,8 +539,8 @@ func TestBlockSearch(t *testing.T) {
 
 	// otherwise it is 0
 	require.Equal(t, blockCount, 0)
-}
 
+}
 func TestTxSearch(t *testing.T) {
 	c := getHTTPClient()
 

@@ -119,6 +119,7 @@ func (rs *Reports) calculateAll() {
 		}
 		return rs.l[i].Connections < rs.l[j].Connections
 	})
+
 }
 
 func (rs *Reports) addError() {
@@ -199,7 +200,7 @@ func GenerateFromBlockStore(s BlockStore) (*Reports, error) {
 			// In the (very unlikely) event that the very last block of the
 			// chain contains payload transactions, those transactions will not
 			// be used in the latency calculations because the last block whose
-			// transactions are used in the block one before the last.
+			// transactions are used is the block one before the last.
 			cur := s.LoadBlock(i)
 			for _, tx := range prev.Txs {
 				txc <- txData{tx: tx, bt: cur.Time}

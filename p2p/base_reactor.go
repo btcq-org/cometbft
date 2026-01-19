@@ -62,6 +62,6 @@ func (br *BaseReactor) SetSwitch(sw *Switch) {
 }
 func (*BaseReactor) GetChannels() []*conn.ChannelDescriptor { return nil }
 func (*BaseReactor) AddPeer(Peer)                           {}
-func (*BaseReactor) RemovePeer(Peer, any)                   {}
+func (*BaseReactor) RemovePeer(Peer, interface{})           {}
 func (*BaseReactor) Receive(Envelope)                       {}
 func (*BaseReactor) InitPeer(peer Peer) Peer                { return peer }

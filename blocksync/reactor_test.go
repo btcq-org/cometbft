@@ -221,6 +221,7 @@ func TestNoBlockResponse(t *testing.T) {
 	}
 
 	for !reactorPairs[1].reactor.pool.IsCaughtUp() {
+
 		time.Sleep(10 * time.Millisecond)
 	}
 
@@ -314,6 +315,7 @@ func TestBadBlockStopsPeer(t *testing.T) {
 	}
 
 	for !lastReactorPair.reactor.pool.IsCaughtUp() && lastReactorPair.reactor.Switch.Peers().Size() != 0 {
+
 		time.Sleep(1 * time.Second)
 	}
 
@@ -514,7 +516,7 @@ func (bcR *ByzantineReactor) respondToPeer(msg *bcproto.BlockRequest, src p2p.Pe
 
 // Receive implements Reactor by handling 4 types of messages (look below).
 // Copied unchanged from reactor.go so the correct respondToPeer is called.
-func (bcR *ByzantineReactor) Receive(e p2p.Envelope) {
+func (bcR *ByzantineReactor) Receive(e p2p.Envelope) { //nolint: dupl
 	if err := ValidateMsg(e.Message); err != nil {
 		bcR.Logger.Error("Peer sent us invalid msg", "peer", e.Src, "msg", e.Message, "err", err)
 		bcR.Switch.StopPeerForError(e.Src, err)

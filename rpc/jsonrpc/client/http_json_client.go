@@ -158,6 +158,8 @@ var (
 
 var _ fmt.Stringer = (*Client)(nil)
 
+var _ fmt.Stringer = (*Client)(nil)
+
 // New returns a Client pointed at the given address.
 // An error is returned on invalid remote. The function panics when remote is nil.
 func New(remote string) (*Client, error) {

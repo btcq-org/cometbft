@@ -41,10 +41,8 @@ func calcABCIResponsesKey(height int64) []byte {
 
 //----------------------
 
-var (
-	lastABCIResponseKey    = []byte("lastABCIResponseKey")
-	offlineStateSyncHeight = []byte("offlineStateSyncHeightKey")
-)
+var lastABCIResponseKey = []byte("lastABCIResponseKey")
+var offlineStateSyncHeight = []byte("offlineStateSyncHeightKey")
 
 //go:generate ../scripts/mockery_generate.sh Store
 
@@ -407,7 +405,7 @@ func (store dbStore) PruneStates(from int64, to int64, evidenceThresholdHeight i
 //------------------------------------------------------------------------
 
 // TxResultsHash returns the root hash of a Merkle tree of
-// ExecTxResults responses (see ABCIResults.Hash)
+// ExecTxResulst responses (see ABCIResults.Hash)
 //
 // See merkle.SimpleHashFromByteSlices
 func TxResultsHash(txResults []*abci.ExecTxResult) []byte {
@@ -733,10 +731,12 @@ func (store dbStore) SetOfflineStateSyncHeight(height int64) error {
 		return err
 	}
 	return nil
+
 }
 
 // Gets the height at which the store is bootstrapped after out of band statesync
 func (store dbStore) GetOfflineStateSyncHeight() (int64, error) {
+
 	buf, err := store.db.Get(offlineStateSyncHeight)
 	if err != nil {
 		return 0, err
@@ -755,6 +755,13 @@ func (store dbStore) GetOfflineStateSyncHeight() (int64, error) {
 
 func (store dbStore) Close() error {
 	return store.db.Close()
+}
+
+func min(a int64, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // responseFinalizeBlockFromLegacy is a convenience function that takes the old abci responses and morphs

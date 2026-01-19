@@ -36,7 +36,8 @@ import (
 
 // Byzantine node sends two different prevotes (nil and blockID) to the same validator
 func TestByzantinePrevoteEquivocation(t *testing.T) {
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	const nValidators = 4
 	const byzantineNode = 0
@@ -148,7 +149,7 @@ func TestByzantinePrevoteEquivocation(t *testing.T) {
 			require.NoError(t, err)
 			prevote2, err := bcs.signVote(cmtproto.PrevoteType, nil, types.PartSetHeader{}, nil)
 			require.NoError(t, err)
-			peerList := reactors[byzantineNode].Switch.Peers().Copy()
+			peerList := reactors[byzantineNode].Switch.Peers().List()
 			bcs.Logger.Info("Getting peer list", "peers", peerList)
 			// send two votes to all peers (1st to one half, 2nd to another half)
 			for i, peer := range peerList {
@@ -204,7 +205,7 @@ func TestByzantinePrevoteEquivocation(t *testing.T) {
 		if lazyProposer.privValidatorPubKey == nil {
 			// If this node is a validator & proposer in the current round, it will
 			// miss the opportunity to create a block.
-			lazyProposer.Logger.Error(fmt.Sprintf("enterPropose: %v", ErrPubKeyIsNotSet))
+			lazyProposer.Logger.Error(fmt.Sprintf("enterPropose: %v", errPubKeyIsNotSet))
 			return
 		}
 		proposerAddr := lazyProposer.privValidatorPubKey.Address()
@@ -300,7 +301,8 @@ func TestByzantineConflictingProposalsWithPartition(t *testing.T) {
 	N := 4
 	logger := consensusLogger().With("test", "byzantine")
 
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	app := newKVStore
 	css, cleanup := randConsensusNet(t, N, "consensus_byzantine_test", newMockTickerFunc(false), app)
@@ -405,7 +407,7 @@ func TestByzantineConflictingProposalsWithPartition(t *testing.T) {
 	// byz proposer sends one block to peers[0]
 	// and the other block to peers[1] and peers[2].
 	// note peers and switches order don't match.
-	peers := switches[0].Peers().Copy()
+	peers := switches[0].Peers().List()
 
 	// partition A
 	ind0 := getSwitchIndex(switches, peers[0])
@@ -493,7 +495,7 @@ func byzantineDecideProposalFunc(ctx context.Context, t *testing.T, height int64
 	block2Hash := block2.Hash()
 
 	// broadcast conflicting proposals/block parts to peers
-	peers := sw.Peers().Copy()
+	peers := sw.Peers().List()
 	t.Logf("Byzantine: broadcasting conflicting proposals to %d peers", len(peers))
 	for i, peer := range peers {
 		if i < len(peers)/2 {
@@ -579,12 +581,12 @@ func (br *ByzantineReactor) AddPeer(peer p2p.Peer) {
 
 	// Send our state to peer.
 	// If we're syncing, broadcast a RoundStepMessage later upon SwitchToConsensus().
-	if !br.reactor.WaitSync() {
+	if !br.reactor.waitSync {
 		br.reactor.sendNewRoundStepMessage(peer)
 	}
 }
 
-func (br *ByzantineReactor) RemovePeer(peer p2p.Peer, reason any) {
+func (br *ByzantineReactor) RemovePeer(peer p2p.Peer, reason interface{}) {
 	br.reactor.RemovePeer(peer, reason)
 }
 
@@ -596,7 +598,8 @@ func (br *ByzantineReactor) InitPeer(peer p2p.Peer) p2p.Peer { return peer }
 
 // Large/oversized proposals should be rejected
 func TestRejectOversizedProposals(t *testing.T) {
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	n := 2
 	css, cleanup := randConsensusNet(t, n, "consensus_reactor_test", newMockTickerFunc(false), newKVStore)
