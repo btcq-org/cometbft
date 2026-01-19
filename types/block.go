@@ -598,7 +598,7 @@ const (
 	// MaxCommitSigBytes is the max commit sig size is made up of MaxSignatureSize (96) bytes for the
 	// signature, 20 bytes for the address, 1 byte for the flag and 14 bytes for
 	// the timestamp.
-	MaxCommitSigBytes = mldsa44.SignatureSize + 36 + maxCommitSigProtoEncOverhead
+	MaxCommitSigBytes = mldsa44.SignatureSize + 37 + maxCommitSigProtoEncOverhead
 )
 
 // CommitSig is a part of the Vote included in a Commit.
