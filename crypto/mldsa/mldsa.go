@@ -95,7 +95,8 @@ func (privKey PrivKey) Sign(msg []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal private key: %w", err)
 	}
-	return privateKey.Sign(rand.Reader, msg, gocrypto.Hash(0))
+	sum := sha256.Sum256(msg)
+	return privateKey.Sign(rand.Reader, sum[:], gocrypto.Hash(0))
 }
 
 //-------------------------------------
@@ -148,5 +149,6 @@ func (pubKey PubKey) VerifySignature(msg []byte, sigStr []byte) bool {
 	if err != nil {
 		return false
 	}
-	return scheme.Verify(publicKey, msg, sigStr, nil)
+	sum := sha256.Sum256(msg)
+	return scheme.Verify(publicKey, sum[:], sigStr, nil)
 }
