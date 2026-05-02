@@ -143,7 +143,8 @@ func TestBlockMakePartSetWithEvidence(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.NotNil(t, partSet)
-	assert.EqualValues(t, 4, partSet.Total())
+	// block is much bigger with mldsa-44 , thus it become many parts
+	assert.EqualValues(t, 59, partSet.Total())
 }
 
 func TestBlockHashesTo(t *testing.T) {
@@ -465,10 +466,9 @@ func TestBlockMaxDataBytes(t *testing.T) {
 		0: {-10, 1, 0, true, 0},
 		1: {10, 1, 0, true, 0},
 		2: {841, 1, 0, true, 0},
-		3: {842, 1, 0, false, 0},
-		4: {843, 1, 0, false, 1},
-		5: {954, 2, 0, false, 1},
-		6: {1053, 2, 100, false, 0},
+		3: {3200, 1, 0, false, 0},
+		4: {3201, 1, 0, false, 1},
+		5: {5669, 2, 0, false, 0},
 	}
 
 	for i, tc := range testCases {
@@ -496,8 +496,8 @@ func TestBlockMaxDataBytesNoEvidence(t *testing.T) {
 		0: {-10, 1, true, 0},
 		1: {10, 1, true, 0},
 		2: {841, 1, true, 0},
-		3: {842, 1, false, 0},
-		4: {843, 1, false, 1},
+		3: {3200, 1, false, 0},
+		4: {3201, 1, false, 1},
 	}
 
 	for i, tc := range testCases {

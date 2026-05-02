@@ -3,8 +3,10 @@ package encoding
 import (
 	"fmt"
 
+	"github.com/cloudflare/circl/sign/mldsa/mldsa44"
 	"github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/ed25519"
+	"github.com/cometbft/cometbft/crypto/mldsa"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	"github.com/cometbft/cometbft/libs/json"
 	pc "github.com/cometbft/cometbft/proto/tendermint/crypto"
@@ -14,6 +16,7 @@ func init() {
 	json.RegisterType((*pc.PublicKey)(nil), "tendermint.crypto.PublicKey")
 	json.RegisterType((*pc.PublicKey_Ed25519)(nil), "tendermint.crypto.PublicKey_Ed25519")
 	json.RegisterType((*pc.PublicKey_Secp256K1)(nil), "tendermint.crypto.PublicKey_Secp256K1")
+	json.RegisterType((*pc.PublicKey_Mldsa)(nil), "tendermint.crypto.PublicKey_Mldsa")
 }
 
 // PubKeyToProto takes crypto.PubKey and transforms it to a protobuf Pubkey
@@ -30,6 +33,12 @@ func PubKeyToProto(k crypto.PubKey) (pc.PublicKey, error) {
 		kp = pc.PublicKey{
 			Sum: &pc.PublicKey_Secp256K1{
 				Secp256K1: k,
+			},
+		}
+	case mldsa.PubKey:
+		kp = pc.PublicKey{
+			Sum: &pc.PublicKey_Mldsa{
+				Mldsa: k,
 			},
 		}
 	default:
@@ -56,6 +65,14 @@ func PubKeyFromProto(k pc.PublicKey) (crypto.PubKey, error) {
 		}
 		pk := make(secp256k1.PubKey, secp256k1.PubKeySize)
 		copy(pk, k.Secp256K1)
+		return pk, nil
+	case *pc.PublicKey_Mldsa:
+		if len(k.Mldsa) != mldsa44.PublicKeySize {
+			return nil, fmt.Errorf("invalid size for PubKeyMldsa. Got %d, expected %d",
+				len(k.Mldsa), mldsa44.PublicKeySize)
+		}
+		pk := make(mldsa.PubKey, mldsa44.PublicKeySize)
+		copy(pk, k.Mldsa)
 		return pk, nil
 	default:
 		return nil, fmt.Errorf("fromproto: key type %v is not supported", k)

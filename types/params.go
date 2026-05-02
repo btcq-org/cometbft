@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cometbft/cometbft/crypto/ed25519"
+	"github.com/cometbft/cometbft/crypto/mldsa"
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -23,11 +24,13 @@ const (
 
 	ABCIPubKeyTypeEd25519   = ed25519.KeyType
 	ABCIPubKeyTypeSecp256k1 = secp256k1.KeyType
+	ABCIPubKeyTypeMLDSA44   = mldsa.KeyType
 )
 
 var ABCIPubKeyTypesToNames = map[string]string{
 	ABCIPubKeyTypeEd25519:   ed25519.PubKeyName,
 	ABCIPubKeyTypeSecp256k1: secp256k1.PubKeyName,
+	ABCIPubKeyTypeMLDSA44:   mldsa.PubKeyName,
 }
 
 // ConsensusParams contains consensus critical parameters that determine the
@@ -114,7 +117,7 @@ func DefaultEvidenceParams() EvidenceParams {
 // only ed25519 pubkeys.
 func DefaultValidatorParams() ValidatorParams {
 	return ValidatorParams{
-		PubKeyTypes: []string{ABCIPubKeyTypeEd25519},
+		PubKeyTypes: []string{ABCIPubKeyTypeMLDSA44, ABCIPubKeyTypeEd25519},
 	}
 }
 

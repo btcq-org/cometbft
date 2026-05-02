@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudflare/circl/sign/mldsa/mldsa44"
 	"github.com/cosmos/gogoproto/proto"
 	gogotypes "github.com/cosmos/gogoproto/types"
 
@@ -287,7 +288,6 @@ func MaxDataBytes(maxBytes, evidenceBytes int64, valsCount int) int64 {
 		MaxHeaderBytes -
 		MaxCommitBytes(valsCount) -
 		evidenceBytes
-
 	if maxDataBytes < 0 {
 		panic(fmt.Sprintf(
 			"Negative MaxDataBytes. Block.MaxBytes=%d is too small to accommodate header&lastCommit&evidence=%d",
@@ -308,7 +308,6 @@ func MaxDataBytesNoEvidence(maxBytes int64, valsCount int) int64 {
 		MaxOverheadForBlock -
 		MaxHeaderBytes -
 		MaxCommitBytes(valsCount)
-
 	if maxDataBytes < 0 {
 		panic(fmt.Sprintf(
 			"Negative MaxDataBytesNoEvidence. Block.MaxBytes=%d is too small to accommodate header&lastCommit&evidence=%d",
@@ -592,9 +591,14 @@ const (
 const (
 	// Max size of commit without any commitSigs -> 82 for BlockID, 8 for Height, 4 for Round.
 	MaxCommitOverheadBytes int64 = 94
-	// Commit sig size is made up of 64 bytes for the signature, 20 bytes for the address,
-	// 1 byte for the flag and 14 bytes for the timestamp
-	MaxCommitSigBytes int64 = 109
+
+	// 4 bytes for field tags + 2 byte for signature LEN + 1 byte for
+	// validator address LEN + 1 byte for timestamp LEN.
+	maxCommitSigProtoEncOverhead = 4 + 2 + 1 + 1 + 1
+	// MaxCommitSigBytes is the max commit sig size is made up of MaxSignatureSize (2420) bytes for the
+	// signature, 20 bytes for the address, 1 byte for the flag and 14 bytes for
+	// the timestamp.
+	MaxCommitSigBytes = mldsa44.SignatureSize + 20 + 17 + maxCommitSigProtoEncOverhead
 )
 
 // CommitSig is a part of the Vote included in a Commit.
@@ -607,7 +611,8 @@ type CommitSig struct {
 
 func MaxCommitBytes(valCount int) int64 {
 	// From the repeated commit sig field
-	var protoEncodingOverhead int64 = 2
+	// 2 bytes for signature and 1 byte for the field tag.
+	var protoEncodingOverhead int64 = 3
 	return MaxCommitOverheadBytes + ((MaxCommitSigBytes + protoEncodingOverhead) * int64(valCount))
 }
 
